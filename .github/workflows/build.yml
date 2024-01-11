@@ -41,7 +41,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: [self-hosted]
+    runs-on: [test]
     steps:
       - name: Pull the docker image
         run: docker pull shivamkumar28dec/netflix:latest
