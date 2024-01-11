@@ -10,10 +10,13 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis relevancy
-      - uses: sonarsource/sonarqube-scan-action@master
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -29,10 +32,22 @@ jobs:
 
       - name: Docker build and push
         run: |
-             docker build --build-arg TMDB_V3_API_KEY=eb6a5858b124ddc75be20ca89d68fd5e -t netflix .
-             docker tag netflix shivamkumar28dec/netflix:latest
-             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-             docker push shivamkumar28dec/netflix:latest  
+          docker build --build-arg TMDB_V3_API_KEY=eb6a5858b124ddc75be20ca89d68fd5e -t netflix .
+          docker tag netflix shivamkumar28dec/netflix:latest
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker push shivamkumar28dec/netflix:latest  
         env:
-         DOCKER_CLI_ACI: 1
-          trivy fs .
+          DOCKER_CLI_ACI: 1
+
+  deploy:
+    needs: build
+    runs-on: [aws-netflix]
+    steps:
+      - name: Pull the docker image
+        run: docker pull shivamkumar28dec/netflix:latest
+
+      - name: Trivy image scan
+        run: trivy image shivamkumar28dec/netflix:latest
+
+      - name: Run the container netflix
+        run: docker run -d --name netflix -p 8081:80 shivamkumar28dec/netflix:latest
